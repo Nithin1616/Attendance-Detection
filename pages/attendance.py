@@ -1,85 +1,40 @@
-```python
-import sqlite3
-from datetime import date, datetime
+import streamlit as st
+import numpy as np
+from PIL import Image
+from datetime import date
+from database import mark_attendance, get_today_attendance
+from face_engine import recognize_face
 
-DB_PATH = "attendance.db"
+st.set_page_config(page_title="Attendance")
 
+st.title("📷 Attendance Marking")
+st.write(f"Date: {date.today()}")
 
-def get_conn():
-    return sqlite3.connect(DB_PATH, check_same_thread=False)
+img = st.camera_input("Capture Face")
 
+if img:
+    image = np.array(Image.open(img).convert("RGB"))
 
-# ------------------ MARK ATTENDANCE ------------------
+    if st.button("Mark Attendance"):
+        result = recognize_face(image)
 
-def mark_attendance(roll_no, method="face", confidence=None):
-    conn = get_conn()
-    c = conn.cursor()
+        if result.get("recognized"):
+            roll = result["roll_no"]
+            res = mark_attendance(roll)
 
-    # Get student ID
-    c.execute("SELECT id FROM students WHERE roll_no=?", (roll_no,))
-    row = c.fetchone()
+            if res["success"]:
+                st.success(f"Marked for {roll}")
+            else:
+                st.warning(res["error"])
+        else:
+            st.error("Face not recognized")
 
-    if not row:
-        conn.close()
-        return {"success": False, "error": "Student not found"}
+st.markdown("---")
 
-    student_id = row[0]
-    today = str(date.today())
-    now = datetime.now().strftime("%H:%M:%S")
+records = get_today_attendance()
 
-    # Check if THIS student already marked today
-    c.execute("""
-        SELECT id FROM attendance
-        WHERE student_id=? AND date=?
-    """, (student_id, today))
-
-    if c.fetchone():
-        conn.close()
-        return {"success": False, "error": "Already marked"}
-
-    # Insert attendance
-    c.execute("""
-        INSERT INTO attendance
-        (student_id, date, time, method, status, confidence)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (student_id, today, now, method, "present", confidence))
-
-    conn.commit()
-    conn.close()
-
-    return {"success": True, "time": now}
-
-
-# ------------------ TODAY ATTENDANCE ------------------
-
-def get_today_attendance():
-    conn = get_conn()
-    c = conn.cursor()
-
-    today = str(date.today())
-
-    c.execute("""
-        SELECT s.name, s.roll_no, a.time, a.method, a.confidence
-        FROM attendance a
-        JOIN students s ON a.student_id = s.id
-        WHERE a.date=?
-    """, (today,))
-
-    rows = c.fetchall()
-    conn.close()
-
-    return rows
-
-
-# ------------------ ALL STUDENTS ------------------
-
-def get_all_students():
-    conn = get_conn()
-    c = conn.cursor()
-
-    c.execute("SELECT id, name, roll_no, email FROM students")
-    rows = c.fetchall()
-
-    conn.close()
-    return rows
-```
+if records:
+    for r in records:
+        st.write(f"{r[0]} ({r[1]}) - {r[2]}")
+else:
+    st.info("No attendance yet")
