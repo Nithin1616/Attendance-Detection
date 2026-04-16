@@ -1,73 +1,85 @@
-import streamlit as st
-import numpy as np
-from PIL import Image
-from datetime import date
-from database import mark_attendance, get_today_attendance, get_all_students
-from face_engine import recognize_face
+```python
+import sqlite3
+from datetime import date, datetime
 
-st.set_page_config(page_title="Attendance", layout="centered")
+DB_PATH = "attendance.db"
 
-st.title("📷 Attendance Marking")
-st.write(f"Date: {date.today()}")
 
-mode = st.radio("Mode", ["Upload", "Camera"])
+def get_conn():
+    return sqlite3.connect(DB_PATH, check_same_thread=False)
 
-# -------- FACE --------
 
-if mode == "Upload":
-img = st.file_uploader("Upload Image", type=["jpg", "png", "jpeg"])
+# ------------------ MARK ATTENDANCE ------------------
 
+def mark_attendance(roll_no, method="face", confidence=None):
+    conn = get_conn()
+    c = conn.cursor()
+
+    # Get student ID
+    c.execute("SELECT id FROM students WHERE roll_no=?", (roll_no,))
+    row = c.fetchone()
+
+    if not row:
+        conn.close()
+        return {"success": False, "error": "Student not found"}
+
+    student_id = row[0]
+    today = str(date.today())
+    now = datetime.now().strftime("%H:%M:%S")
+
+    # Check if THIS student already marked today
+    c.execute("""
+        SELECT id FROM attendance
+        WHERE student_id=? AND date=?
+    """, (student_id, today))
+
+    if c.fetchone():
+        conn.close()
+        return {"success": False, "error": "Already marked"}
+
+    # Insert attendance
+    c.execute("""
+        INSERT INTO attendance
+        (student_id, date, time, method, status, confidence)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (student_id, today, now, method, "present", confidence))
+
+    conn.commit()
+    conn.close()
+
+    return {"success": True, "time": now}
+
+
+# ------------------ TODAY ATTENDANCE ------------------
+
+def get_today_attendance():
+    conn = get_conn()
+    c = conn.cursor()
+
+    today = str(date.today())
+
+    c.execute("""
+        SELECT s.name, s.roll_no, a.time, a.method, a.confidence
+        FROM attendance a
+        JOIN students s ON a.student_id = s.id
+        WHERE a.date=?
+    """, (today,))
+
+    rows = c.fetchall()
+    conn.close()
+
+    return rows
+
+
+# ------------------ ALL STUDENTS ------------------
+
+def get_all_students():
+    conn = get_conn()
+    c = conn.cursor()
+
+    c.execute("SELECT id, name, roll_no, email FROM students")
+    rows = c.fetchall()
+
+    conn.close()
+    return rows
 ```
-if img:
-    image = np.array(Image.open(img).convert("RGB"))
-    st.image(image, width=250)
-
-    if st.button("Mark Attendance"):
-        result = recognize_face(image)
-
-        if result.get("recognized"):
-            roll = result["roll_no"]
-            res = mark_attendance(roll)
-
-            if res["success"]:
-                st.success(f"Marked for {roll}")
-            else:
-                st.warning(res["error"])
-        else:
-            st.error("Face not recognized")
-```
-
-else:
-img = st.camera_input("Capture")
-
-```
-if img:
-    image = np.array(Image.open(img).convert("RGB"))
-
-    if st.button("Mark Attendance"):
-        result = recognize_face(image)
-
-        if result.get("recognized"):
-            roll = result["roll_no"]
-            res = mark_attendance(roll)
-
-            if res["success"]:
-                st.success(f"Marked for {roll}")
-            else:
-                st.warning(res["error"])
-        else:
-            st.error("Face not recognized")
-```
-
-# -------- TODAY --------
-
-st.markdown("---")
-st.subheader("Today's Attendance")
-
-records = get_today_attendance()
-
-if records:
-for r in records:
-st.write(f"{r[0]} ({r[1]}) - {r[2]}")
-else:
-st.info("No attendance yet")
