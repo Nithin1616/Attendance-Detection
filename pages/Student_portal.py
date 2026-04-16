@@ -2,7 +2,12 @@ from ui import apply_ui
 apply_ui()
 
 import streamlit as st
-from database import get_student_attendance, get_attendance_percentage, get_all_students, get_total_classes
+from database import (
+    get_student_attendance,
+    get_attendance_percentage,
+    get_all_students,
+    get_total_classes
+)
 
 
 def render():
@@ -20,27 +25,30 @@ def render():
 
     # ── Lookup ─────────────────────────
     col1, col2 = st.columns([2, 1])
+
     with col1:
         roll_input = st.text_input(
             "Enter your Roll Number",
-            placeholder="e.g. CS2023001",
-            label_visibility="visible"
+            placeholder="e.g. CS2023001"
         )
+
     with col2:
         st.markdown("<br>", unsafe_allow_html=True)
+        search = st.button("🔍 Search")   # ✅ FIXED (removed width)
 
-        # ✅ UPDATED
-        search = st.button("🔍 Search", width="stretch")
-
-    if not roll_input:
+    # ── If no search yet → show class overview
+    if not search or not roll_input:
         st.markdown("<br>", unsafe_allow_html=True)
+
         students = get_all_students()
         total_cls = get_total_classes()
 
         if students and total_cls > 0:
             st.markdown("### Class Overview")
+
             for s in students:
                 pct = get_attendance_percentage(s[2])
+
                 color = "#10b981" if pct >= 75 else "#f59e0b" if pct >= 60 else "#ef4444"
                 bar_w = int(pct)
 
@@ -55,16 +63,20 @@ def render():
                 """, unsafe_allow_html=True)
         else:
             st.info("Enter a roll number above to view attendance details.")
+
         return
 
     # ── Individual Student ─────────────
     roll_no = roll_input.strip().upper()
-    records = get_student_attendance(roll_no)
-    pct     = get_attendance_percentage(roll_no)
 
+    records = get_student_attendance(roll_no)
+    pct = get_attendance_percentage(roll_no)
+
+    # Check if student exists
     if not records and pct == 0.0:
         students = get_all_students()
         exists = any(s[2] == roll_no for s in students)
+
         if not exists:
             st.error(f"No student found with roll number {roll_no}")
             return
@@ -77,9 +89,10 @@ def render():
 
     # ── History ─────────────
     if records:
-        st.dataframe(records, width="stretch")  # ✅ UPDATED
+        st.dataframe(records, use_container_width=True)   # ✅ FIXED
     else:
         st.info("No attendance records found.")
 
 
+# Run page
 render()
