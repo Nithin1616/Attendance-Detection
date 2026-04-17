@@ -60,17 +60,17 @@ def delete_student(roll_no: str):
 
 # ─────────────────── CLASSES (sessions) ───────────────────
 
-# def mark_class_conducted(session_date: str = None):
-#     """Record that a class was held on a given date."""
-#     conn = get_conn()
-#     c = conn.cursor()
-#     if not session_date:
-#         session_date = str(date.today())
-#     c.execute("SELECT id FROM classes WHERE date=?", (session_date,))
-#     if not c.fetchone():
-#         c.execute("INSERT INTO classes (date) VALUES (?)", (session_date,))
-#         conn.commit()
-#     conn.close()
+def mark_class_conducted(session_date: str = None):
+    """Record that a class was held on a given date."""
+    conn = get_conn()
+    c = conn.cursor()
+    if not session_date:
+        session_date = str(date.today())
+    c.execute("SELECT id FROM classes WHERE date=?", (session_date,))
+    if not c.fetchone():
+        c.execute("INSERT INTO classes (date) VALUES (?)", (session_date,))
+        conn.commit()
+    conn.close()
 
 
 def get_total_classes():
