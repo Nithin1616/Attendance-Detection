@@ -10,7 +10,8 @@ os.makedirs(FACES_DIR, exist_ok=True)
 def register_face(roll_no: str, image: np.ndarray) -> dict:
     """Register a student's face"""
     try:
-        embedding = np.ones(128) * np.mean(image)
+        
+        embedding = np.ones(128) * np.mean(image[:, :, 0])
 
         path = os.path.join(FACES_DIR, f"{roll_no}.pkl")
         with open(path, "wb") as f:
@@ -35,7 +36,7 @@ def load_all_embeddings():
 
 
 # 🔹 Demo face recognition
-def recognize_face(image, threshold=0.72):
+def recognize_face(image, threshold=1000):
     """Simple demo face recognition"""
     try:
         all_embeddings = load_all_embeddings()
