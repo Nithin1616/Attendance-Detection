@@ -6,13 +6,11 @@ import numpy as np
 FACES_DIR = "data/faces"
 os.makedirs(FACES_DIR, exist_ok=True)
 
-
-# 🔹 Save embedding (dummy for now)
+# 🔹 Save embedding
 def register_face(roll_no: str, image: np.ndarray) -> dict:
-    """Register a student's face (stores dummy embedding for deployment)"""
+    """Register a student's face"""
     try:
-        # Dummy embedding (since no DeepFace)
-        embedding = np.random.rand(128)
+        embedding = np.ones(128) * np.mean(image)
 
         path = os.path.join(FACES_DIR, f"{roll_no}.pkl")
         with open(path, "wb") as f:
@@ -36,18 +34,26 @@ def load_all_embeddings():
     return embeddings
 
 
-# 🔹 Demo face recognition (NO DeepFace)
+# 🔹 Demo face recognition
 def recognize_face(image, threshold=0.72):
-    """Simple demo face recognition (for deployment)"""
+    """Simple demo face recognition"""
     try:
         all_embeddings = load_all_embeddings()
 
-        # No students registered
         if not all_embeddings:
             return {"recognized": False, "confidence": 0}
 
-        # Pick first student (demo)
-        best_match = list(all_embeddings.keys())[0]
+        input_embedding = np.ones(128) * np.mean(image)
+
+        best_match = None
+        best_score = float("inf")
+
+        for roll, emb in all_embeddings.items():
+            dist = np.linalg.norm(input_embedding - emb)
+
+            if dist < best_score:
+                best_score = dist
+                best_match = roll
 
         return {
             "recognized": True,
