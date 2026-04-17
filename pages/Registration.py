@@ -47,7 +47,7 @@ def render():
 
                 if result["success"]:
                     if upload:
-                        img = np.array(Image.open(upload).convert("RGB"))
+                        img = np.array(Image.open(upload).convert("RGB").resize((100,100)))
                         face_result = register_face(roll_no.upper(), img)
 
                         if face_result["success"]:
@@ -94,7 +94,7 @@ def render():
             # ✅ Updated
             if st.button("Update Face", width="stretch"):
                 if upd_roll and upd_photo:
-                    img = np.array(Image.open(upd_photo).convert("RGB"))
+                    img = np.array(Image.open(upload).convert("RGB").resize((100,100)))
                     res = register_face(upd_roll.upper(), img)
 
                     if res["success"]:
