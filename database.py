@@ -98,7 +98,7 @@ def mark_attendance(roll_no: str, method: str = "face", confidence: float = None
     today = session_date or str(date.today())
     now = datetime.now().strftime("%H:%M:%S")
 
-    mark_class_conducted(today)
+   # mark_class_conducted(today)
 
     c.execute(
         "SELECT id FROM attendance WHERE student_id=? AND date=?",
